@@ -1,40 +1,80 @@
 body {
 	background-color: whitesmoke;
 	font-size: 1.25em;
+	padding-bottom: 2em;
+}
+
+code {
+	font-size: 0.9em;
+	padding: 0.1em;
+	padding-top: 0.2em;
+	border: 1px solid #ff5060;
+	border-radius: 0.25em;
 }
 
 header {
 	text-align: center;
 	background-color: #ff5060;
-	min-height: 10em;
+	padding: 4em 1em;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	font-size: 2em;
 	color: whitesmoke;
-	box-shadow: 0 -2em 2em 2em black;
-	margin-bottom: 4em;
+	box-shadow: 0 -2.5em 2em 2em black;
+}
+
+header code {
+	padding: 0.1em;
+	border: 1px solid #fafafa;
+	border-radius: 0.25em;
+}
+
+#title {
+	font-size: 2em;
+	margin-bottom: 0.25em;
+}
+
+#subtitle {
+	font-size: 1.25em;
 }
 
 p {
-	text-align: justify;
+	padding: 0 1em;
+	color: darkslategray;
+	margin-bottom: 2em;
+	line-height: 1.33em;
 }
 
 div.code {
-	font-size: 0.8em;
 	tab-size: 2;
+	border-radius: 0;
 }
 
 p,
 div.code {
-	margin-left: auto;
-	margin-right: auto;
-	max-width: 43em; /* match width of title */
-	padding: 1em 0;
+	margin: 2em auto;
+	max-width: 40em; /* match width of title */
 }
 
 div.code > pre {
+	font-size: 0.9em;
 	padding: 2em;
 	margin-top: 0.5em;
+}
+
+div.code > span {
+	padding-left: 1.4em; /* line up with code indent */
+	color: #ff5060;
+	font-weight: bold;
+}
+
+div.code code {
+	border: none;
+}
+
+@media (min-width: 800px) {
+	div.code > pre {
+		border-radius: 1em;
+	}
 }

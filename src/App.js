@@ -1,123 +1,55 @@
 import React from 'react'
 import SyntaxHighlighter from 'react-syntax-highlighter'
-import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs'
+import { gruvboxDark } from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import './App.css'
 
-const paragraph1 =
-	'I have a simple React.js client communicating with a Node.js server via socket.io. When running from my local machine, the Node.js server is listening on port 7781 '
-
-const paragraph2 =
-	'The server also has Twitch API webhooks listening to follower and stream title changes, which are then emitted via socket.io. Specifically, Twitch credentials and a reverse-proxy webhook config are passed to a new webhook listener, which subscribes callbacks to the two different events.'
-
-const paragraph3 =
-	'Here is the true code for the React component, listening for each event hooked up to each webhook subscription.'
-
 const clientSocketCode = `import React from 'react'
-import socketIOClient from 'socket.io-client'
+import io from 'socket.io-client'
 
-const socket = socketIOClient('http://localhost:7781')
+const socket = io('http://localhost:3010')
 
 const App = () => {
-	const [someText, setSomeText] = React.useState('')
 	React.useEffect(() => {
-		const onDataChange = data => setSomeText(data)
-		socket.on('dataChange', onDataChange)
-		return () => socket.off('dataChange', onDataChange)
+		socket.on('connect', () => {
+			console.log('websocket connected to server')
+		})
+		socket.emit('from-client', 'hello from client')
+		socket.on('from-server', (data) => console.log(data))
+		return () => socket.off('from-server')
 	})
 
-	// ...
+	return <div className='App' />
 }
+
+export default App
 `
 
 const serverSocketCode = `const express = require('express')
 const http = require('http')
 const io = require('socket.io')
+const cors = require('cors')
 
 const app = express()
+app.use(cors())
 const server = http.createServer(app)
 const socket = io(server, { origins: '*:*' })
 
-// ...
+socket.on('connection', () => {
+	console.log('websocket connected to client')
 
-socket.on('connection', async socket => {
-	let data // then get some data...
-	socket.emit('dataChange', data)
+	socket.on('disconnect', () =>
+		console.log('websocket disconnected from client'),
+	)
+
+	socket.on('from-client', (data) => {
+		console.log(data)
+	})
+
+	socket.emit('from-server', 'hello from server')
 })
 
-server.listen(7781)
-`
+server.listen(3010)
 
-const serverWebhookCode = `const TwitchClient = require('twitch').default
-const HelixFollow = require('twitch').HelixFollow
-const HelixStream = require('twitch').HelixStream
-const WebhookListener = require('twitch-webhooks').default
-
-const { userId, clientId, secret } = require('./config')
-const twitchClient = TwitchClient
-	.withClientCredentials(clientId, secret)
-const webhookConfig = {
-	hostName: '1a2b3c4d.ngrok.io',
-	port: 8090,
-	reverseProxy: { port: 443, ssl: true },
-}
-
-// ...
-
-const getWebhookSubscriptions = async () => {
-	const listener = await WebhookListener
-		.create(twitchClient, webhookConfig)
-	listener.listen()
-	const streamChangeSubscription = await listener
-		.subscribeToStreamChanges(userId, onStreamChange)
-	const followSubscription = await listener
-		.subscribeToFollowsToUser(userId, onNewFollow)
-}
-
-const onStreamChange = (stream = HelixStream) => {
-	if (stream) socket.emit('streamChange', stream)
-}
-
-const onFollow = (follow = HelixFollow) => {
-	if (follow) socket.emit('follow', follow)
-}
-
-const subscriptions = getWebhookSubscriptions()
-
-// ...
-`
-
-const clientSocketCode2 = `const App = () => {
-	const [follow, setFollow] = React.useState('')
-	const [stream, setStream] = React.useState('')
-	React.useEffect(() => {
-		socket.on('follow', data => setFollow(data))
-		socket.on('streamChange', data => setStream(data))
-
-		return () => {
-			socket.off('follow', data => setFollow(data))
-			socket.off('streamChange', data => setStream(data))
-		})
-
-	// ...
-}
-`
-
-const nginxConfiguration = `server {
-
-	server_name twitch-webhook.travisk.info;
-
-	location / {
-					proxy_pass http://localhost:8090;
-					#proxy_http_version 1.1;
-					#proxy_set_header Upgrade $http_upgrade;
-					#proxy_set_header Connection 'upgrade';
-					proxy_set_header Host $host;
-					#proxy_cache_bypass $http_upgrade;
-					proxy_redirect off;
-					proxy_buffering off;
-					proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-					proxy_set_header X-Forwarded-Ssl on;
-	}
 `
 
 const CodeBlock = ({ title, code, language }) => {
@@ -125,9 +57,9 @@ const CodeBlock = ({ title, code, language }) => {
 		<div className='code'>
 			<span>{title}</span>
 			<SyntaxHighlighter
-				customStyle={{ padding: '2em', borderRadius: '.5em' }}
+				customStyle={{ padding: '2em' }}
 				language={language || 'javascript'}
-				style={atomOneDark}>
+				style={gruvboxDark}>
 				{code}
 			</SyntaxHighlighter>
 		</div>
@@ -137,35 +69,32 @@ const CodeBlock = ({ title, code, language }) => {
 function App() {
 	return (
 		<div className='App'>
-			<header>Hi, you might be able to help me with a problem</header>
-			<p>{paragraph1}</p>
-			<CodeBlock title='Local Client' code={clientSocketCode} />
-			<CodeBlock title='Local Server' code={serverSocketCode} />
-			<p>{paragraph2}</p>
-			<CodeBlock title='Local Server' code={serverWebhookCode} />
-			<p>{paragraph3}</p>
-			<CodeBlock title='Local Client' code={clientSocketCode2} />
+			<header>
+				<span id='title'>Hi, you might be able to help me with a problem</span>
+				<span id='subtitle'>
+					Concerning <code>React.js</code>, <code>Express.js</code>, and{' '}
+					<code>Socket.io</code>
+				</span>
+			</header>
 			<p>
-				The full code for the client can be found{' '}
-				<a href='https://github.com/travisk-codes/twitch-overlay/blob/master/src/App.js'>
-					here
-				</a>{' '}
-				and the full server code can be found{' '}
-				<a href='https://github.com/travisk-codes/twitch-overlay/blob/master/server.js'>
-					here
-				</a>
-				. When all of this is run from my local computer, serving the client
-				over 7781 and using an ngrok address as a reverse proxy for the webhook
-				over 8090, everything works fine. It is when I move the all this to my
-				remote server that it no longer works. Here is my NGINX configuration
-				for https://twitch-webhook.travisk.info, the address I'm using for the
-				reverse proxy instead of ngrok:
+				I have a simple <code>React.js</code> client communicating with a{' '}
+				<code>Node.js</code> ( <code>Express.js</code> ) server via websockets ({' '}
+				<code>Socket.io</code> ). The server is running on my local machine, and
+				communicating with the client via <code>http://localhost:3010</code>.
+				Below is the code for the client and the server:
 			</p>
-			<CodeBlock
-				title='NGINX Config'
-				code={nginxConfiguration}
-				language='nginx'
-			/>
+			<CodeBlock title='Client' code={clientSocketCode} />
+			<CodeBlock title='Server' code={serverSocketCode} />
+			<p>
+				The client console displays <code>websocket connected to server</code>{' '}
+				and <code>hello from server</code>. The server console displays{' '}
+				<code>websocket connected to client</code>, but does not display{' '}
+				<code>hello from client</code>. Is there an obvious reason why the
+				server fails to do so? I would greatly appreciate any help with this
+				problem. Please let me know if there's any other information I can
+				provide to clarify the issue.
+			</p>
+			<p>♥️ Travis</p>
 		</div>
 	)
 }
