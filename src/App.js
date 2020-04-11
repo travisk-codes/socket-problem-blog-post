@@ -12,11 +12,11 @@ const App = () => {
 	React.useEffect(() => {
 		socket.on('connect', () => {
 			console.log('websocket connected to server')
+			socket.emit('from-client', 'hello from client')
+			socket.on('from-server', (data) => console.log(data))
 		})
-		socket.emit('from-client', 'hello from client')
-		socket.on('from-server', (data) => console.log(data))
 		return () => socket.off('from-server')
-	})
+	}, [])
 
 	return <div className='App' />
 }
